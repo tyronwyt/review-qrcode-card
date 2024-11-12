@@ -9,19 +9,19 @@ import { jsPDF } from 'jspdf';
 
 function App() {
 
-  const [logo, setLogo] = useState(null);
   const [link, setLink] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const cardRef = useRef(null);
 
 
   // Handle logo upload with FileInput
-  const handleLogoUpload = (file) => {
+  const handleLogoUpload = (file: Blob) => {
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target.result);
-        setLogo(file);
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        if (e?.target?.result && typeof e.target.result === 'string') {
+          setPreviewUrl(e.target.result);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -43,6 +43,9 @@ function App() {
       canvas.height = cardHeight;
       const ctx = canvas.getContext('2d');
 
+      if (!ctx) {
+        throw new Error('Failed to get 2D context');
+      }
       // draw white background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, cardWidth, cardHeight);
