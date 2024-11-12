@@ -1,15 +1,18 @@
-import { Container, Fieldset, FileInput, TextInput } from '@mantine/core'
+import { Button, Center, Container, Fieldset, FileInput, Flex, Text, TextInput } from '@mantine/core'
 
 import '@mantine/core/styles.css';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
-
+import classes from './app.module.css';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 function App() {
 
   const [logo, setLogo] = useState(null);
   const [link, setLink] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
+  const cardRef = useRef(null);
 
 
   // Handle logo upload with FileInput
@@ -24,9 +27,59 @@ function App() {
     }
   };
 
+  // Convert mm to pixels (assuming 96 DPI)
+  const mmToPx = (mm: number) => Math.round(mm * 3.7795275591);
+
+  const cardWidth = mmToPx(84);
+  const cardHeight = mmToPx(55);
+
+  const handleExport = async () => {
+    if (!cardRef.current) return;
+
+    try {
+      // Create a canvas from the card
+      const canvas = document.createElement('canvas');
+      canvas.width = cardWidth;
+      canvas.height = cardHeight;
+      const ctx = canvas.getContext('2d');
+
+      // draw white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, cardWidth, cardHeight);
+
+      // concrt HTML content to dataURL
+      const data = await html2canvas(cardRef.current, {
+        width: cardWidth,
+        height: cardHeight,
+        scale: 2, // higher resolution
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [84, 55]
+      })
+
+      pdf.addImage(
+        data.toDataURL('image/png', 1.0),
+        'PNG',
+        0,
+        0,
+        84,
+        55
+      )
+
+      // Save the PDF
+      pdf.save('business-card.pdf');
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
+  }
+
   return (
     <div>
-      <Container h="100vh">
+      <Container h="100vh" mt={'50px'}>
 
         <Fieldset legend="Business Card Details">
           <FileInput
@@ -36,24 +89,48 @@ function App() {
             accept='image/*'
             onChange={handleLogoUpload}
           />
-          <TextInput label="QR code link" placeholder='Enter a link to generate a QR code' onChange={(e) => setLink(e.target.value)} />
+          <TextInput
+            label="QR code link"
+            placeholder='https://www.example.com'
+            onChange={(e) => {
+              const value = e.target.value;
+              setLink(value);
+            }}
+          />
         </Fieldset>
 
 
-        <h3>Preview</h3>
-        {previewUrl && (
-          <img
-            src={previewUrl}
-            alt="Logo"
-            className="max-w-full max-h-full object-contain"
-          />
-        )}
+        <Fieldset legend="Preview">
+          <Container ref={cardRef} className={classes.previewCard} size={cardWidth} h={cardHeight} >
+            <Flex direction="row" h="100%" justify="center" align="center">
+              {previewUrl && (
+                <img
+                  src={previewUrl}
+                  alt="Logo"
+                  className="max-w-full max-h-full object-contain"
+                  width='100px'
+                />
+              )}
+              <Flex direction="column" align="center" justify="center" gap={10}>
+                <Text size='md' fw={500} ta="center">
+                  Thanks for your custom!<br />
+                  Give us 5 stars by scanning below.
+                </Text>
+                {link && (
+                  <QRCode value={link} size={80} />
+                )}
+              </Flex>
+            </Flex>
 
-        <p>{link}</p>
-        <QRCode value={link} size={256} />
+          </Container>
+          <Center mt={50}>
+            <Button onClick={handleExport} size='lg'>Download to PDF</Button>
+          </Center>
+        </Fieldset>
 
       </Container>
-    </div>
+
+    </div >
   )
 }
 
