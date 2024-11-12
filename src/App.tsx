@@ -15,7 +15,7 @@ function App() {
 
 
   // Handle logo upload with FileInput
-  const handleLogoUpload = (file: Blob) => {
+  const handleLogoUpload = (file: File | null) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e: ProgressEvent<FileReader>) => {
